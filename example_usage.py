@@ -1,229 +1,113 @@
 #!/usr/bin/env python3
 """
-Example usage of the FacePreprocessor class.
-This script demonstrates various ways to use the face preprocessing functionality.
+Example usage of the FacePreprocessor class for both regular face images and document images.
 """
 
-from main import FacePreprocessor
-import matplotlib.pyplot as plt
 import os
+import sys
+from main import FacePreprocessor
 
 
-def example_basic_usage(image_path):
-    """Basic usage example."""
-    print("=== Basic Usage Example ===")
+def process_image(image_path: str, output_dir: str = "aligned_faces"):
+    """
+    Process a single image (face or document) and extract the aligned face.
+    
+    Args:
+        image_path (str): Path to the input image
+        output_dir (str): Directory to save the output
+    """
+    if not os.path.exists(image_path):
+        print(f"Error: Image file not found: {image_path}")
+        return False
     
     # Initialize preprocessor
     preprocessor = FacePreprocessor(device='cpu')
     
-    # Example image path (update this to your image path)
-    image_path = image_path
-    
-    if not os.path.exists(image_path):
-        print(f"Image not found: {image_path}")
-        print("Please update the image_path variable with a valid image path.")
-        return
-    
-    # Process face with default settings
-    aligned_face = preprocessor.process_face(image_path)
-    
-    if aligned_face is not None:
-        # Save the processed face
-        output_path = "aligned_faces/processed_face.jpg"
-        preprocessor.save_image(aligned_face, output_path)
-        print(f"Face processed and saved to: {output_path}")
-    else:
-        print("Failed to process face")
-
-
-def example_custom_settings(image_path):
-    """Example with custom settings."""
-    print("\n=== Custom Settings Example ===")
-    
-    preprocessor = FacePreprocessor(device='cpu')
-    
-    # Example image path
-    image_path = image_path
-    
-    if not os.path.exists(image_path):
-        print(f"Image not found: {image_path}")
-        return
+    print(f"\n{'='*60}")
+    print(f"Processing: {image_path}")
+    print(f"{'='*60}")
     
     try:
-        # Load image
-        image = preprocessor.load_image(image_path)
-        print(f"Loaded image shape: {image.shape}")
-        
-        # Detect faces
-        landmarks_list = preprocessor.detect_faces(image)
-        
-        if landmarks_list:
-            # Process each detected face
-            for i, landmarks in enumerate(landmarks_list):
-                print(f"\nProcessing face {i+1}:")
-                
-                # Auto-upright the image
-                upright_image, upright_landmarks = preprocessor.auto_upright_image(image)
-                
-                # Align with custom size
-                aligned_face, _ = preprocessor.align_face(
-                    upright_image, 
-                    upright_landmarks, 
-                    output_size=(512, 512)  # Custom size
-                )
-                
-                # Save with custom name
-                output_path = f"aligned_faces/face_{i+1}_512x512.jpg"
-                preprocessor.save_image(aligned_face, output_path)
-                print(f"Face {i+1} saved to: {output_path}")
-        else:
-            print("No faces detected in the image")
-            
-    except Exception as e:
-        print(f"Error: {e}")
-
-
-def example_rotation_only(image_path):
-    """Example showing just rotation functionality."""
-    print("\n=== Rotation Example ===")
-    
-    preprocessor = FacePreprocessor()
-    
-    image_path = image_path
-    
-    if not os.path.exists(image_path):
-        print(f"Image not found: {image_path}")
-        return
-    
-    try:
-        # Load image
-        image = preprocessor.load_image(image_path)
-        
-        # Rotate by 45 degrees
-        rotated_image, _ = preprocessor.rotate_image(image, 45)
-        
-        # Save rotated image
-        output_path = "aligned_faces/rotated_45_degrees.jpg"
-        preprocessor.save_image(rotated_image, output_path)
-        print(f"Rotated image saved to: {output_path}")
-        
-    except Exception as e:
-        print(f"Error: {e}")
-
-
-def example_batch_processing():
-    """Example of batch processing multiple images."""
-    print("\n=== Batch Processing Example ===")
-    
-    preprocessor = FacePreprocessor()
-    
-    # List of image paths (update these with your actual image paths)
-    image_paths = [
-        "path/to/image1.jpg",
-        "path/to/image2.jpg",
-        "path/to/image3.jpg"
-    ]
-    
-    processed_count = 0
-    
-    for i, image_path in enumerate(image_paths):
-        if not os.path.exists(image_path):
-            print(f"Image not found: {image_path}")
-            continue
-        
-        print(f"\nProcessing image {i+1}/{len(image_paths)}: {image_path}")
-        
-        try:
-            aligned_face = preprocessor.process_face(image_path)
-            
-            if aligned_face is not None:
-                output_path = f"aligned_faces/batch_face_{i+1}.jpg"
-                preprocessor.save_image(aligned_face, output_path)
-                processed_count += 1
-                print(f"Successfully processed: {output_path}")
-            else:
-                print(f"Failed to process: {image_path}")
-                
-        except Exception as e:
-            print(f"Error processing {image_path}: {e}")
-    
-    print(f"\nBatch processing complete. Successfully processed {processed_count}/{len(image_paths)} images.")
-
-
-def example_with_visualization(image_path):
-    """Example with matplotlib visualization."""
-    print("\n=== Visualization Example ===")
-    
-    preprocessor = FacePreprocessor()
-    
-    image_path = image_path
-    
-    if not os.path.exists(image_path):
-        print(f"Image not found: {image_path}")
-        return
-    
-    try:
-        # Load original image
-        original = preprocessor.load_image(image_path)
-        
-        # Process face
+        # Process the image
         aligned_face = preprocessor.process_face(image_path)
         
         if aligned_face is not None:
-            # Create visualization
-            plt.figure(figsize=(15, 5))
+            # Create output directory
+            os.makedirs(output_dir, exist_ok=True)
             
-            # Original image
-            plt.subplot(1, 3, 1)
-            plt.title("Original Image")
-            plt.imshow(original)
-            plt.axis("off")
+            # Generate output filename
+            base_name = os.path.splitext(os.path.basename(image_path))[0]
+            output_path = os.path.join(output_dir, f"aligned_{base_name}.jpg")
             
-            # Aligned face
-            plt.subplot(1, 3, 2)
-            plt.title("Aligned Face")
-            plt.imshow(aligned_face)
-            plt.axis("off")
-            
-            # Save processed face
-            output_path = "aligned_faces/visualized_face.jpg"
-            preprocessor.save_image(aligned_face, output_path)
-            
-            plt.subplot(1, 3, 3)
-            plt.title("Saved Image Path")
-            plt.text(0.1, 0.5, f"Saved to:\n{output_path}", 
-                    transform=plt.gca().transAxes, fontsize=12)
-            plt.axis("off")
-            
-            plt.tight_layout()
-            plt.savefig("aligned_faces/comparison.png", dpi=150, bbox_inches='tight')
-            plt.show()
-            
-            print(f"Visualization saved to: aligned_faces/comparison.png")
+            # Save the aligned face
+            if preprocessor.save_image(aligned_face, output_path):
+                print(f"✅ Successfully processed and saved aligned face to: {output_path}")
+                return True
+            else:
+                print("❌ Failed to save aligned face")
+                return False
         else:
-            print("Failed to process face for visualization")
+            print("❌ Failed to process face")
+            return False
             
+    except ValueError as e:
+        print(f"❌ Error: {e}")
+        return False
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"❌ Unexpected error: {e}")
+        return False
 
 
 def main():
-    """Run all examples."""
-    print("FacePreprocessor Examples")
-    print("=" * 50)
+    """Main function to demonstrate usage."""
+    print("Face Preprocessor - Document and Face Image Processing")
+    print("=" * 60)
     
-    # Create output directory
-    os.makedirs("aligned_faces", exist_ok=True)
+    # Example usage with different types of images
+    test_images = [
+        # Regular face images
+        "/path/to/regular_face_image.jpg",
+        
+        # Document images (passports, driving licenses, etc.)
+        "/path/to/passport_image.jpg",
+        "/path/to/driving_license_image.jpg",
+        "/path/to/id_card_image.jpg",
+        
+        # Add your actual image paths here
+    ]
     
-    # Run examples (comment out the ones you don't want to run)
-    example_basic_usage()
-    example_custom_settings()
-    example_rotation_only()
-    example_batch_processing()
-    example_with_visualization()
+    # Filter out non-existent paths for demonstration
+    existing_images = [img for img in test_images if os.path.exists(img)]
     
-    print("\nAll examples completed!")
+    if not existing_images:
+        print("No existing test images found.")
+        print("Please update the test_images list with actual image paths.")
+        print("\nExample usage:")
+        print("python example_usage.py /path/to/your/image.jpg")
+        return
+    
+    print(f"Found {len(existing_images)} test image(s)")
+    
+    # Process each image
+    success_count = 0
+    for image_path in existing_images:
+        if process_image(image_path):
+            success_count += 1
+    
+    print(f"\n{'='*60}")
+    print(f"Processing complete: {success_count}/{len(existing_images)} images processed successfully")
+    print(f"{'='*60}")
 
 
 if __name__ == "__main__":
-    main() 
+    # If command line argument provided, process that specific image
+    if len(sys.argv) > 1:
+        image_path = sys.argv[1]
+        if process_image(image_path):
+            print("✅ Image processed successfully!")
+        else:
+            print("❌ Failed to process image")
+            sys.exit(1)
+    else:
+        # Run with example images
+        main() 

@@ -1,29 +1,33 @@
-# Face Preprocessing Library
+# Face Preprocessor
 
-A comprehensive Python library for face image preprocessing, including rotation, alignment, and face detection using facial landmarks.
+A Python library for preprocessing face images, including rotation, alignment, and face detection. The library can handle both regular face images and document images (passports, driving licenses, ID cards, etc.).
 
 ## Features
 
-- **Face Detection**: Detect faces in images using facial landmarks
-- **Auto-rotation**: Automatically rotate images to make faces upright
-- **Face Alignment**: Align faces based on eye positions
-- **Image Cropping**: Crop and resize faces to specified dimensions
-- **Batch Processing**: Process multiple images efficiently
-- **Visualization**: Display and save comparison images
+- **Face Detection**: Detects human faces in images using advanced face alignment techniques
+- **Document Processing**: Automatically detects and extracts faces from document images
+- **Face Alignment**: Aligns faces based on eye positions for consistent processing
+- **Auto-rotation**: Automatically rotates images to make faces upright
+- **Multiple Detection Methods**: Uses both face_alignment and OpenCV for robust face detection
+- **Error Handling**: Comprehensive error handling for various scenarios
 
 ## Installation
 
-1. Install the required dependencies:
+### Prerequisites
+
+- Python 3.7+
+- OpenCV
+- NumPy
+- face_alignment
+- matplotlib (for visualization)
+
+### Install Dependencies
+
 ```bash
-pip install -r requirements.txt
+pip install opencv-python numpy face-alignment matplotlib
 ```
 
-2. For GPU support (optional), install PyTorch with CUDA:
-```bash
-pip install torch torchvision --index-url https://download.pytorch.org/whl/cu118
-```
-
-## Quick Start
+## Usage
 
 ### Basic Usage
 
@@ -33,219 +37,191 @@ from main import FacePreprocessor
 # Initialize the preprocessor
 preprocessor = FacePreprocessor(device='cpu')  # or 'cuda' for GPU
 
-# Process a single image
-image_path = "path/to/your/image.jpg"
-aligned_face = preprocessor.process_face(image_path)
+# Process a regular face image
+aligned_face = preprocessor.process_face("path/to/face_image.jpg")
 
+# Process a document image (passport, driving license, etc.)
+aligned_face = preprocessor.process_face("path/to/passport_image.jpg")
+
+# Save the processed face
 if aligned_face is not None:
-    # Save the processed face
-    preprocessor.save_image(aligned_face, "aligned_faces/processed_face.jpg")
-    print("Face processed successfully!")
-else:
-    print("Failed to process face")
+    preprocessor.save_image(aligned_face, "output/aligned_face.jpg")
 ```
 
-### Advanced Usage
+### Command Line Usage
+
+```bash
+# Process a single image
+python example_usage.py /path/to/your/image.jpg
+
+# Run with example images (update paths in the script first)
+python example_usage.py
+```
+
+## Document Image Processing
+
+The library automatically detects if an image is a document (passport, driving license, ID card) and extracts the face region before processing. Document detection is based on:
+
+- **Aspect Ratio**: Documents are typically rectangular (aspect ratio 1.2-2.5)
+- **Edge Density**: Documents have high edge density due to text and borders
+- **Straight Lines**: Documents typically have straight borders
+
+### Document Processing Flow
+
+1. **Document Detection**: Automatically detects if the image is a document
+2. **Face Extraction**: Extracts face regions from the document using multiple detection methods
+3. **Face Processing**: Processes the extracted face using the standard pipeline
+4. **Error Handling**: Throws clear error messages if no face is detected in documents
+
+### Error Handling
+
+The library provides specific error handling for document images:
 
 ```python
-from main import FacePreprocessor
-import matplotlib.pyplot as plt
-
-preprocessor = FacePreprocessor()
-
-# Load image
-image = preprocessor.load_image("path/to/image.jpg")
-
-# Detect faces
-landmarks_list = preprocessor.detect_faces(image)
-
-if landmarks_list:
-    for i, landmarks in enumerate(landmarks_list):
-        # Auto-upright the image
-        upright_image, upright_landmarks = preprocessor.auto_upright_image(image)
-        
-        # Align with custom size
-        aligned_face, _ = preprocessor.align_face(
-            upright_image, 
-            upright_landmarks, 
-            output_size=(512, 512)
-        )
-        
-        # Save with custom name
-        preprocessor.save_image(aligned_face, f"aligned_faces/face_{i+1}.jpg")
+try:
+    aligned_face = preprocessor.process_face("document_image.jpg")
+except ValueError as e:
+    print(f"Document processing error: {e}")
+    # Error: "No human face detected in the document image. Please provide an image with a clear human face."
 ```
 
-## Class Methods
+## API Reference
 
-### FacePreprocessor
-
-The main class for face preprocessing operations.
+### FacePreprocessor Class
 
 #### `__init__(device='cpu')`
-Initialize the preprocessor with face alignment model.
+Initialize the face preprocessor.
 
 **Parameters:**
 - `device` (str): Device to run face alignment on ('cpu' or 'cuda')
 
-#### `load_image(image_path)`
-Load and preprocess an image from file path.
-
-**Parameters:**
-- `image_path` (str): Path to the image file
-
-**Returns:**
-- `np.ndarray`: Loaded image in RGB format
-
-#### `rotate_image(image, angle)`
-Rotate the image around its center by the given angle.
-
-**Parameters:**
-- `image` (np.ndarray): Input image
-- `angle` (float): Rotation angle in degrees
-
-**Returns:**
-- `Tuple[np.ndarray, np.ndarray]`: Rotated image and rotation matrix
-
-#### `detect_faces(image)`
-Detect faces in the image and return landmarks.
-
-**Parameters:**
-- `image` (np.ndarray): Input image
-
-**Returns:**
-- `Optional[List[np.ndarray]]`: List of face landmarks or None if no faces detected
-
-#### `auto_upright_image(image, max_attempts=10)`
-Automatically rotate image to make face upright.
-
-**Parameters:**
-- `image` (np.ndarray): Input image
-- `max_attempts` (int): Maximum number of rotation attempts
-
-**Returns:**
-- `Tuple[np.ndarray, np.ndarray]`: Upright image and detected landmarks
-
-#### `align_face(image, landmarks, output_size=(256, 256))`
-Align face based on eye positions and crop to specified size.
-
-**Parameters:**
-- `image` (np.ndarray): Input image
-- `landmarks` (np.ndarray): Face landmarks
-- `output_size` (Tuple[int, int]): Desired output size (width, height)
-
-**Returns:**
-- `Tuple[np.ndarray, np.ndarray]`: Aligned face and rotated image
-
 #### `process_face(image_path, output_size=(256, 256))`
-Complete face processing pipeline: load, detect, align, and crop face.
+Complete face processing pipeline for both regular and document images.
 
 **Parameters:**
 - `image_path` (str): Path to input image
-- `output_size` (Tuple[int, int]): Desired output size
+- `output_size` (tuple): Desired output size (width, height)
 
 **Returns:**
-- `Optional[np.ndarray]`: Processed face image or None if processing fails
+- `np.ndarray` or `None`: Processed face image or None if processing fails
 
-#### `save_image(image, output_path)`
-Save image to file.
+**Raises:**
+- `ValueError`: If no human face is detected in document images
+
+#### `is_document_image(image)`
+Detect if the image is likely a document.
 
 **Parameters:**
-- `image` (np.ndarray): Image to save
-- `output_path` (str): Output file path
+- `image` (np.ndarray): Input image
 
 **Returns:**
-- `bool`: True if saved successfully, False otherwise
+- `bool`: True if image appears to be a document
+
+#### `extract_face_from_document(image)`
+Extract face region from a document image.
+
+**Parameters:**
+- `image` (np.ndarray): Document image
+
+**Returns:**
+- `np.ndarray` or `None`: Extracted face region or None if no face found
 
 ## Examples
 
-### Example 1: Basic Face Processing
+### Processing Regular Face Images
 
 ```python
 from main import FacePreprocessor
 
 preprocessor = FacePreprocessor()
-aligned_face = preprocessor.process_face("input.jpg")
+
+# Process a regular face image
+aligned_face = preprocessor.process_face("face.jpg")
 if aligned_face is not None:
-    preprocessor.save_image(aligned_face, "output.jpg")
+    preprocessor.save_image(aligned_face, "aligned_face.jpg")
 ```
 
-### Example 2: Batch Processing
+### Processing Document Images
+
+```python
+from main import FacePreprocessor
+
+preprocessor = FacePreprocessor()
+
+# Process a passport image
+try:
+    aligned_face = preprocessor.process_face("passport.jpg")
+    if aligned_face is not None:
+        preprocessor.save_image(aligned_face, "passport_face.jpg")
+except ValueError as e:
+    print(f"No face found in document: {e}")
+```
+
+### Batch Processing
 
 ```python
 from main import FacePreprocessor
 import os
 
 preprocessor = FacePreprocessor()
-image_paths = ["image1.jpg", "image2.jpg", "image3.jpg"]
 
-for i, path in enumerate(image_paths):
-    if os.path.exists(path):
-        aligned_face = preprocessor.process_face(path)
+image_paths = [
+    "face1.jpg",
+    "passport1.jpg", 
+    "driving_license.jpg"
+]
+
+for image_path in image_paths:
+    try:
+        aligned_face = preprocessor.process_face(image_path)
         if aligned_face is not None:
-            preprocessor.save_image(aligned_face, f"aligned_face_{i+1}.jpg")
+            output_path = f"aligned_{os.path.basename(image_path)}"
+            preprocessor.save_image(aligned_face, output_path)
+            print(f"Processed: {image_path}")
+    except ValueError as e:
+        print(f"Error processing {image_path}: {e}")
 ```
 
-### Example 3: Custom Settings
+## Supported Document Types
 
-```python
-from main import FacePreprocessor
+- **Passports**: National and international passports
+- **Driving Licenses**: Various driving license formats
+- **ID Cards**: National identity cards
+- **Other Documents**: Any document with a clear human face
 
-preprocessor = FacePreprocessor(device='cuda')  # Use GPU
+## Error Messages
 
-# Load and process with custom size
-image = preprocessor.load_image("input.jpg")
-landmarks_list = preprocessor.detect_faces(image)
+- `"No human face detected in the document image. Please provide an image with a clear human face."` - When no face is found in a document
+- `"Image file not found: {path}"` - When the image file doesn't exist
+- `"Could not load image from: {path}"` - When the image file is corrupted or unsupported
 
-if landmarks_list:
-    upright_image, upright_landmarks = preprocessor.auto_upright_image(image)
-    aligned_face, _ = preprocessor.align_face(
-        upright_image, 
-        upright_landmarks, 
-        output_size=(512, 512)
-    )
-    preprocessor.save_image(aligned_face, "custom_size_face.jpg")
-```
+## Tips for Best Results
 
-## Running Examples
-
-Run the example script to see various usage patterns:
-
-```bash
-python example_usage.py
-```
-
-This will demonstrate:
-- Basic usage
-- Custom settings
-- Rotation only
-- Batch processing
-- Visualization
-
-## Dependencies
-
-- `opencv-python`: Image processing
-- `numpy`: Numerical operations
-- `face-alignment`: Face landmark detection
-- `matplotlib`: Visualization
-- `dlib`: Face detection backend
-- `torch`: PyTorch for face alignment
-- `torchvision`: PyTorch vision utilities
-
-## Notes
-
-- The library uses the `face-alignment` library for facial landmark detection
-- Default output size is 256x256 pixels
-- Images are automatically converted to RGB format
-- The auto-upright feature rotates images in 35-degree increments
-- All processed images are saved in BGR format (OpenCV standard)
+1. **Image Quality**: Use clear, well-lit images
+2. **Face Visibility**: Ensure the face is clearly visible and not obscured
+3. **Document Orientation**: Documents should be properly oriented
+4. **Face Size**: The face should be reasonably sized in the image
+5. **Multiple Faces**: The library processes the largest detected face
 
 ## Troubleshooting
 
-1. **No faces detected**: Ensure the image contains clear, visible faces
-2. **Memory issues**: Use CPU device for large images or reduce batch size
-3. **Installation issues**: Make sure all dependencies are properly installed
-4. **CUDA errors**: Install PyTorch with appropriate CUDA version for your GPU
+### Common Issues
 
-## License
+1. **No faces detected in document**
+   - Ensure the document has a clear, unobstructed face
+   - Check image quality and lighting
+   - Try different document orientations
 
-This project is open source and available under the MIT License. 
+2. **OpenCV cascade classifier not found**
+   - The library will fall back to face_alignment only
+   - Install OpenCV with cascade files: `pip install opencv-contrib-python`
+
+3. **Memory issues with large images**
+   - Resize large images before processing
+   - Use smaller output sizes
+
+### Performance Optimization
+
+- Use GPU (`device='cuda'`) for faster processing
+- Process images in batches for efficiency
+- Consider image resizing for very large images 
